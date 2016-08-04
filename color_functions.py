@@ -8,7 +8,7 @@ import os, sys,glob, copy, h5py, csv
 import cPickle as pkl
 import pandas as pd
 from scipy.signal import savgol_filter
-from scipy.ndimage import zoom, gaussian_filter
+from scipy.ndimage import zoom, gaussian_filter, imread
 
 #from djd import nwbtools
 
@@ -464,7 +464,7 @@ def psth_line(times,triggers,pre=0.5,timeDomain=False,post=1,binsize=0.05,ymax=7
     hist = np.mean(bytrial,axis=0)/binsize
     edges = np.linspace(-pre,post,numbins)
 
-    plt.locator_params(axis='y',nbins=4)
+    dump=plt.locator_params(axis='y',nbins=4)
     if output == 'fig':
         if error == 'shaded':
             if 'shade_color' in kwargs.keys():
@@ -806,3 +806,33 @@ def scatter_withcirclesize(ax,x,y,s,alpha=1.0,c='k',cmap=plt.cm.PRGn,**kwargs):
         ax.add_collection(p)
     #plt.colorbar(p)
     
+exchange_annotation={'M186118':{},
+                    'M186100':{},
+                    'M186098':{},
+                    'M180417':{},
+                    'M181423_5':{}}
+
+exchange_annotation['M186118']['ONOFF_list']=[115,189,247,442,449,463]
+exchange_annotation['M186100']['ONOFF_list']=[505]
+exchange_annotation['M186098']['ONOFF_list']=[346]
+exchange_annotation['M180417']['ONOFF_list']=[12,35,68,81,85,182,189,196,229,232,357,407,567,580,599,619,623,627,636,659]
+exchange_annotation['M181423_5']['ONOFF_list']=[17,153,464]
+        
+exchange_annotation['M186118']['ON_list']=[121,240,366,374,401]
+exchange_annotation['M186100']['ON_list']=[709]
+exchange_annotation['M186098']['ON_list']=[83,269,318,391,458]
+exchange_annotation['M180417']['ON_list']=[152,184,361,405,463,489,493,546,550,596,597,601,610,624,654,658,667]
+exchange_annotation['M181423_5']['ON_list']=[201,1]
+
+exchange_annotation['M186118']['OFF_list']=[88,155,187,243,394,451,371]
+exchange_annotation['M186100']['OFF_list']=[503,519,547,549,559]
+exchange_annotation['M186098']['OFF_list']=[7,8,58,137,342,467]
+exchange_annotation['M180417']['OFF_list']=[16,26,83,147,284,286,298,402,581,593,630,642,647,648,649,657,664]
+exchange_annotation['M181423_5']['OFF_list']=[250,452,104,456,8,3,188]
+
+exchange_annotation['M186118']['color_list']=[75,430]
+exchange_annotation['M186100']['color_list']=[557]
+exchange_annotation['M186098']['color_list']=[256,376]
+exchange_annotation['M180417']['color_list']=[371,449,590,662,665]
+exchange_annotation['M181423_5']['color_list']=[241]
+}
