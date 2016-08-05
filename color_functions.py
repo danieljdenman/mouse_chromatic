@@ -10,46 +10,16 @@ import pandas as pd
 from scipy.signal import savgol_filter
 from scipy.ndimage import zoom, gaussian_filter, imread
 
-#from djd import nwbtools
-
 #define some colors with HEX values, for use throughout in plotting functions
 UV='#4B0082'
 Green='#6B8E23'
 
 sampling_rate = 25000 # in Hz, for eCube system
 
-#propagate cell ID numbers from the sorting process
-cell_numbers={}
-for expt in ['M186118','M186100','M180417','M186098','M179401','M192079','M181423']:
-    cell_numbers[expt]={}
-cell_numbers['M186118']['lgn_list_ex']=[365,366,75,457,451,115,449,187,371,374,189,155,191,401,394,
- 395,121,240,406,463,430,243,88,442,166,247,52]
-cell_numbers['M186100']['lgn_list_ex']=[503,505,
- 519,549,547,559,557,567,138,715,709,811]
-cell_numbers['M180417']['lgn_list_ex']=[405,402,407,357,412,361,371,268,664,662,665,449,451,152,
- 457,458,35,463,470,667,493,489,147,196,85,26,
-            546,540,550,81,83,298,189,567,581,580,
-            16,586,596,593,590,184,597,599,601,608,12,610,232,619,182,624,623,627,
-            68,631,630,229,286,636,642,647,659,648,6,649,657,658,654,284]
-cell_numbers['M186098']['lgn_list_ex']=[318,256,
- 269,376,427,431,437,458,342,137,8,465,391,467,
- 7,346,83,58]
-cell_numbers['M179401']['lgn_list_ex']=[129,177,176,222,262,127,175,84,46,261,220,174,82,125,472,272,271,172,121,37,80,287,293,294,475,311,295,478,316,320,321,
- 33,323,347,325,310,167,327,28,331,209,251,252,480,479,22,351,353,70,357,363,110,361,356,338,339,154,155,473,474,202,65,66,492,482,
- 366,484,343,414,426,428,461,9,444,453,192,193,451,382,392,437,55,397,233,236,470,463,454,490,185,440,471,94,229,231,181,91,467,
-             468][:44]
-cell_numbers['M192079']['lgn_list_ex']=[227,295,107,48,294,226,360,374,376,379,375,380,372,370,153,156,222,41,285,340,152,221,99,40,338,216,388,389,336,390,394,395,
- 392,211,400,399,401,94,402,32,406,271,410,407,417,419,409,434,429,431,31,30,435,437,87,136,140,445,439,440,444,28,206,201,264,
- 447,449,263,455,462,457,459,84,463,465,467,469,473,477,478,124,479,252,481,191,192,485,70,487,305,248,489,491,493,495,520,245,122,
-10,12,14,304,497,13,67,499,179,501,66,503,301,507,116,117,64,65,509,62,115,513,57,230,515,518,162,351,104,159,361][27:101]
-cell_numbers['M181423']['lgn_list_ex']=lgn_list = [290,467,471,186,324,44,304,328,325,469,470,134,184,329,318,40,
- 77,394,384,263,267,393,117,171,28,73,401,428,425,429,415,438,419,432,436,437,439,440,24,441,206,207,163,
- 108,162,252,254,448,22,447,158,202,450,250,16,17,452,201,104,454,453,61,249,456,153,101,102,458,8,195,460,
- 462,464,194,3,241,143,1,188,472,431,321,323,281,293,295,289,299,303,45,307,236,88,82,342,368,233,177,176,32,
- ][80:108]
 
-
-
+#=================================================================================================
+#---------plotting helper functions-------------------------------------------------
+#=================================================================================================
 def placeAxesOnGrid(fig,dim=[1,1],xspan=[0,1],yspan=[0,1],wspace=None,hspace=None):
     '''
     Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
@@ -86,36 +56,6 @@ def placeAxesOnGrid(fig,dim=[1,1],xspan=[0,1],yspan=[0,1],wspace=None,hspace=Non
 
     inner_ax = np.array(inner_ax).squeeze().tolist() #remove redundant dimension
     return inner_ax
-
-
-def plotExchangeFromPSTH(data,unit,setcolor,**kwargs):
-    if 'axis' in kwargs.keys():
-        axis = kwargs['axis']
-    else:
-        plt.figure();axis=plt.gca()
-    
-    if 'color_exchange_'+setcolor in data['all']['lgn'][unit].keys():
-        if data['all']['lgn'][unit]['color_exchange_'+setcolor][0][0] is not None:
-            test_contrasts_o=np.array([-1.0,-0.8,-0.6,-0.5,-0.4,-0.2,0.0])
-            uv_green_ratio_opp = np.array([(np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][17:26])+np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][63:72])-np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][:9])*2.0) for test_contrast in test_contrasts_o])
-            test_contrasts_s=np.array([1.0,0.8,0.6,0.5,0.4,0.2,0.0])
-            uv_green_ratio_same = np.array([(np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][17:26])+np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][63:72])-np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][:9])*2.0) for test_contrast in test_contrasts_s])
-
-            if setcolor == 'uv':
-                axis.plot(test_contrasts_o/0.4,uv_green_ratio_opp/np.max([uv_green_ratio_opp,uv_green_ratio_same]),'--o',color=Green)
-                axis.plot(test_contrasts_s/0.4,uv_green_ratio_same/np.max([uv_green_ratio_opp,uv_green_ratio_same]),'-o',color=Green)
-            else:
-                axis.plot(test_contrasts_o/0.4,uv_green_ratio_opp/np.max([uv_green_ratio_opp,uv_green_ratio_same]),'--o',color=UV)
-                axis.plot(test_contrasts_s/0.4,uv_green_ratio_same/np.max([uv_green_ratio_opp,uv_green_ratio_same]),'-o',color=UV)
-
-            axis.set_ylim(-1.1,1.1);axis.set_xlim(-3,3)
-            axis.set_ylabel(r'$normalized response$',fontsize=12)
-            axis.tick_params(axis='both',labelsize=10)
-            axis.spines['top'].set_visible(False);axis.yaxis.set_ticks_position('left')
-            axis.spines['right'].set_visible(False);axis.xaxis.set_ticks_position('bottom')   
-            axis.set_xlabel(r'$set:test \/ Ratio$',fontsize=12)
-            axis.axhline(y=0,color='k',linestyle='--')
-            #axis.set_title(expt_names[i]+' unit: '+unit)
             
 def cleanAxes(ax,bottomLabels=False,leftLabels=False,rightLabels=False,topLabels=False,total=False):
     ax.tick_params(axis='both',labelsize=10)
@@ -139,294 +79,77 @@ def cleanAxes(ax,bottomLabels=False,leftLabels=False,rightLabels=False,topLabels
         ax.set_xticks([]);
         ax.set_yticklabels('',visible=False);
         ax.set_yticks([])
-
-def summarize_color(data,unit):
-    fig = plt.figure(figsize=(8.5,11))
-
-    #isi, time
-    ax_isi =  placeAxesOnGrid(fig,dim=(1,1),xspan=(0,0.15),yspan=(0,0.08))#plt.subplot2grid((gridsize_x,gridsize_y),(0,0),colspan=2)
-    ax_time =  placeAxesOnGrid(fig,dim=(1,1),yspan=(0,0.08),xspan=(0.25,1.0))#plt.subplot2grid((gridsize_x,gridsize_y),(0,3),colspan=8)
-    if 'isi' not in data['all']['lgn'][unit].keys():
-        if len(data['all']['lgn'][unit]['times'])>1000:
-            spks = np.array(data['all']['lgn'][unit]['times'][:1000])/25000.0
-        else:
-            spks = np.array(data['all']['lgn'][unit]['times'])/25000.0
-        data['all']['lgn'][unit]['isi']=ephys.ccg(spks,spks,(-100,100),0.5)
-        data['all']['lgn'][unit]['isi'][1][np.where(np.logical_and(data['all']['lgn'][unit]['isi'][0]>-1.0,data['all']['lgn'][unit]['isi'][0]<1.0))]=0
-    ax_isi.plot(data['all']['lgn'][unit]['isi'][1][1:],data['all']['lgn'][unit]['isi'][0],'k');cleanAxes(ax_isi,bottomLabels=True)
-    dump = ephys.psth_line(np.array(data['all']['lgn'][unit]['times'])/25000.0,
-                             [0],
-                             pre=0,post=data['all']['lgn'][unit]['times'][-1]/25000.0 - 1,
-                             binsize=10,
-                             error='shaded',timeDomain=True,sparse=False,
-                             labelsize=8,axis_labelsize=10,
-                             axes=ax_time,color='k')
-    ax_time.set_ylim(0,np.max(plt.gca().get_lines()[0].get_ydata()))
-    box_props = dict(boxstyle='round',fc='w',alpha=0.6)
-    for i,start_time in enumerate(data['info']['start_times']):
-        nm = ''
-        for clause in data['info']['folder_order'][i].split('_'):
-            if clause[-1].isdigit():
-                pass
+        
+def scatter_withcirclesize(ax,x,y,s,alpha=1.0,c='k',cmap=plt.cm.PRGn,colorbar=False,**kwargs):
+    if c != 'k':
+        if type(c)==str:
+            c = [c for dump in range(len(s))]
+            cmap=None
+        if type(c)==list:
+            if len(c) == len(s):
+                c = c
             else:
-                nm = nm+'_'+clause
-        ax_time.axvline(start_time/25000.,linestyle='dashed',color='r')
-        ax_time.text(start_time/25000.,np.max(plt.gca().get_lines()[0].get_ydata())/1.4,nm[1:],size=8,rotation=90,ha='left',va='bottom',bbox=box_props)
-    ax_isi.set_title(data['name']+' '+str(unit))
-
-    #flash
-    ymax = 0
-    for i,key in enumerate(['flash_uv','flash_green']):
-        if key in data['all']['lgn'][unit].keys():
-            for k in data['all']['lgn'][unit][key]:
-                if np.max(data['all']['lgn'][unit][key][k][0]) > ymax:
-                    ymax = np.ceil(np.max(data['all']['lgn'][unit][key][k][0]))
-    ax_flashes=placeAxesOnGrid(fig,dim=(3,3),xspan=(0,0.30),yspan=(0.13,0.4))
-    ax_bright_uv = ax_flashes[0][1]
-    ax_bright_uv.add_patch(patches.Rectangle((0,0),0.05,ymax,facecolor='#000000'))
-    ax_bright_uv.plot(data['all']['lgn'][unit]['flash_uv']['bright'][1],data['all']['lgn'][unit]['flash_uv']['bright'][0],color=UV);ax_bright_uv.set_xlim(-0.05,0.3);ax_bright_uv.set_ylim(0,ymax);
-    ax_dark_uv = ax_flashes[1][1]#plt.subplot2grid((gridsize_x,gridsize_y),(flashrowstart+2,1),rowspan=2)
-    ax_dark_uv.add_patch(patches.Rectangle((0,0),0.05,ymax,facecolor='#ffffff',alpha=0.2))
-    ax_dark_uv.plot(data['all']['lgn'][unit]['flash_uv']['dark'][1],data['all']['lgn'][unit]['flash_uv']['dark'][0],color=UV);ax_dark_uv.set_xlim(-0.05,0.3);ax_dark_uv.set_ylim(0,ymax);
-    ax_bright_green = ax_flashes[0][0]#plt.subplot2grid((gridsize_x,gridsize_y),(flashrowstart,0),rowspan=2)
-    ax_bright_green.add_patch(patches.Rectangle((0,0),0.05,ymax,facecolor='#000000'))
-    ax_bright_green.plot(data['all']['lgn'][unit]['flash_green']['bright'][1],data['all']['lgn'][unit]['flash_green']['bright'][0],color=Green);ax_bright_green.set_xlim(-0.05,0.3);ax_bright_green.set_ylim(0,ymax);
-    ax_bright_green.set_xticks([0,0.2]);ax_bright_green.set_yticks([0,ymax])
-    ax_dark_green = ax_flashes[1][0]#plt.subplot2grid((gridsize_x,gridsize_y),(flashrowstart+2,0),rowspan=2)
-    ax_dark_green.add_patch(patches.Rectangle((0,0),0.05,ymax,facecolor='#ffffff',alpha=0.2))
-    ax_dark_green.plot(data['all']['lgn'][unit]['flash_green']['dark'][1],data['all']['lgn'][unit]['flash_green']['dark'][0],color=Green);ax_dark_green.set_xlim(-0.05,0.3);ax_dark_green.set_ylim(0,ymax);                             
-    ax_dark_green.set_yticks([0,ymax])
-    ax_uv = ax_flashes[2][1]#plt.subplot2grid((gridsize_x,gridsize_y),(flashrowstart+4,1),rowspan=2)
-    ax_uv.add_patch(patches.Rectangle((0,0),0.05,ymax,facecolor='#ffffff',linestyle='dotted'))
-    ax_uv.plot(data['all']['lgn'][unit]['flash_uv']['bright'][1],data['all']['lgn'][unit]['flash_uv']['bright'][0],color=UV);ax_uv.set_xlim(-0.05,0.3);ax_uv.set_ylim(0,ymax);
-    ax_uv.plot(data['all']['lgn'][unit]['flash_uv']['dark'][1],data['all']['lgn'][unit]['flash_uv']['dark'][0],color=UV);ax_uv.set_xlim(-0.05,0.3);ax_uv.set_ylim(0,ymax);
-    ax_uv.set_xticks([0,0.2]);
-    ax_green = ax_flashes[2][0]#plt.subplot2grid((gridsize_x,gridsize_y),(flashrowstart+4,0),rowspan=2)
-    ax_green.add_patch(patches.Rectangle((0,0),0.05,ymax,facecolor='#ffffff',linestyle='dotted'))
-    ax_green.plot(data['all']['lgn'][unit]['flash_green']['bright'][1],data['all']['lgn'][unit]['flash_green']['bright'][0],color=Green);ax_green.set_xlim(-0.05,0.3);ax_green.set_ylim(0,ymax);
-    ax_green.plot(data['all']['lgn'][unit]['flash_green']['dark'][1],data['all']['lgn'][unit]['flash_green']['dark'][0],color=Green);ax_green.set_xlim(-0.05,0.3);ax_green.set_ylim(0,ymax);                             
-    ax_green.set_xticks([0,0.2]);ax_green.set_yticks([0,ymax])
-    ax_bright =  ax_flashes[0][2]#plt.subplot2grid((gridsize_x,gridsize_y),(flashrowstart,2),rowspan=2)
-    ax_bright.add_patch(patches.Rectangle((0,0),0.05,ymax,facecolor='#000000'))
-    ax_bright.plot(data['all']['lgn'][unit]['flash_uv']['bright'][1],data['all']['lgn'][unit]['flash_uv']['bright'][0],color=UV);ax_bright.set_xlim(-0.05,0.3);ax_bright.set_ylim(0,ymax);
-    ax_bright.plot(data['all']['lgn'][unit]['flash_green']['bright'][1],data['all']['lgn'][unit]['flash_green']['bright'][0],color=Green);ax_bright.set_xlim(-0.05,0.3);ax_bright.set_ylim(0,ymax);
-    ax_dark = ax_flashes[1][2]#plt.subplot2grid((gridsize_x,gridsize_y),(flashrowstart+2,2),rowspan=2)
-    ax_dark.add_patch(patches.Rectangle((0,0),0.05,ymax,facecolor='#ffffff',alpha=0.2))
-    ax_dark.plot(data['all']['lgn'][unit]['flash_uv']['dark'][1],data['all']['lgn'][unit]['flash_uv']['dark'][0],color=UV)#ax_dark.set_xlim(-0.05,0.5);ax_dark.set_xlim(0,100);
-    ax_dark.plot(data['all']['lgn'][unit]['flash_green']['dark'][1],data['all']['lgn'][unit]['flash_green']['dark'][0],color=Green);ax_dark.set_xlim(-0.05,0.3);ax_dark.set_ylim(0,ymax);                             
-    ax_dark.set_xticks([0,0.2]);
-    cleanAxes(ax_bright_uv);cleanAxes(ax_dark_uv)   
-    cleanAxes(ax_bright_green,leftLabels=True);cleanAxes(ax_dark_green,leftLabels=True)
-    cleanAxes(ax_green,leftLabels=True,bottomLabels=True);cleanAxes(ax_uv,bottomLabels=True)  
-    cleanAxes(ax_bright);cleanAxes(ax_dark,bottomLabels=True) 
-    ax_flashes[2][2].set_visible(False)
-
-    #exchange
-    ymax = 0
-    for i,key in enumerate(['color_exchange_uv','color_exchange_green']):
-        if key in data['all']['lgn'][unit].keys():
-            for k in data['all']['lgn'][unit][key]:
-                if np.max(data['all']['lgn'][unit][key][k][0]) > ymax:
-                    ymax = np.ceil(np.max(data['all']['lgn'][unit][key][k][0]))
-    test_contrasts = [-1.0,-0.8,-0.4,0.0,0.4,0.8,1.0]
-    ax_exhange_ratios =placeAxesOnGrid(fig,dim=(1,1),xspan=(0.58,0.84),yspan=(0.14,0.38))  #plt.subplot2grid((gridsize_x,gridsize_y),(exchangerowstart+2,6),rowspan=3,colspan=3)
-    if 'color_exchange_green' in data['all']['lgn'][unit].keys():
-        plotExchangeFromPSTH_2(data,unit,'green',axis=ax_exhange_ratios)
-        ax_exchange_green = placeAxesOnGrid(fig,dim=(len(test_contrasts),1),xspan=(0.90,1.0),yspan=(0.13,0.4))
-        for i,test_contrast in enumerate(test_contrasts):
-            ax = ax_exchange_green[i] #plt.subplot2grid((gridsize_x,gridsize_y),(i+exchangerowstart,4))
-            ax.add_patch(patches.Rectangle((0,ymax/2.),1,test_contrast*(ymax/2.),facecolor=UV,alpha=0.2))
-            ax.add_patch(patches.Rectangle((0,ymax/2.),1,0.4*(ymax/2.),facecolor=Green,alpha=0.2))
-            ax.axhline(ymax/2.,linestyle='dotted')
-            ax.plot(data['all']['lgn'][unit]['color_exchange_green'][test_contrast][1],data['all']['lgn'][unit]['color_exchange_green'][test_contrast][0],color=UV)
-            ax.set_xlim(-0.1,1.35)
-            ax.set_ylim(0,ymax)
-            ax.set_xticks([0,1.]);ax.set_yticks([0,ymax])
-            if i < len(test_contrasts)-1:
-                cleanAxes(ax)
-            else:
-                cleanAxes(ax,bottomLabels=True,leftLabels=True)
-    if 'color_exchange_uv' in data['all']['lgn'][unit].keys():        
-        ax_exchange_uv = placeAxesOnGrid(fig,dim=(len(test_contrasts),1),xspan=(0.36,0.46),yspan=(0.13,0.4))
-        plotExchangeFromPSTH_2(data,unit,'uv',axis=ax_exhange_ratios)
-        for i,test_contrast in enumerate(test_contrasts):
-            ax = ax_exchange_uv[i]#plt.subplot2grid((gridsize_x,gridsize_y),(i+exchangerowstart,9))
-            ax.add_patch(patches.Rectangle((0,ymax/2.),1,test_contrast*(ymax/2.),facecolor=Green,alpha=0.2))
-            ax.add_patch(patches.Rectangle((0,ymax/2.),1,0.4*(ymax/2.),facecolor=UV,alpha=0.2))
-            ax.axhline(ymax/2.,linestyle='dotted')
-            ax.plot(data['all']['lgn'][unit]['color_exchange_uv'][test_contrast][1],data['all']['lgn'][unit]['color_exchange_uv'][test_contrast][0],color=Green)
-            ax.set_xlim(-0.1,1.35)
-            ax.set_ylim(0,ymax)
-            ax.set_xticks([0,1.]);ax.set_yticks([0,ymax])
-            if i < len(test_contrasts)-1:
-                cleanAxes(ax)
-            else:
-                cleanAxes(ax,bottomLabels=True,leftLabels=True)
-
-    #STAs
-    if 'sta_uv' in data['all']['lgn'][unit].keys() and 'sta_green' in data['all']['lgn'][unit].keys():
-        taus = [0,30,60,90,120,150,180,210,240,270]
-        ax_stas=placeAxesOnGrid(fig,dim=(2,len(taus)),xspan=(0,0.75),yspan=(0.46,0.6))
-        #ax_fitUV = plt.subplot2grid((gridsize_x,gridsize_y),(11,10))
-        if 'sta_uv_fit' not in data['all']['lgn'][unit].keys():
-            data['all']['lgn'][unit]['sta_uv_fit'] = ephys.fitRF(data['all']['lgn'][unit]['sta_uv']) 
-        #ax_fitUV.imshow(data['all']['lgn'][unit]['sta_uv_fit']['avg_space'],cmap=plt.cm.seismic,clim=(-0.3,0.3))
-        #ax_fitUV.set_xlim(data['all']['lgn'][unit]['sta_uv_fit']['center'][0]-9,data['all']['lgn'][unit]['sta_uv_fit']['center'][0]+9)
-        #ax_fitUV.set_ylim(data['all']['lgn'][unit]['sta_uv_fit']['center'][1]-9,data['all']['lgn'][unit]['sta_uv_fit']['center'][1]+9)
-        #cleanAxes(ax_fitUV,total=True)
-        for i,tau in enumerate(taus):
-            ax = ax_stas[0][i]#plt.subplot2grid((gridsize_x,gridsize_y),(stasrowstart,i))
-            ax.imshow(data['all']['lgn'][unit]['sta_uv'][str(tau)],cmap=plt.cm.seismic,clim=(-0.3,0.3))
-            ax.set_xlim(data['all']['lgn'][unit]['sta_uv_fit']['center'][0]-9,data['all']['lgn'][unit]['sta_uv_fit']['center'][0]+9)
-            ax.set_ylim(data['all']['lgn'][unit]['sta_uv_fit']['center'][1]-9,data['all']['lgn'][unit]['sta_uv_fit']['center'][1]+9)
-            ax.set_title(str(tau-16));cleanAxes(ax,total=True)
-
-        #ax_fitGreen = plt.subplot2grid((gridsize_x,gridsize_y),(12,10))
-        ax_impGreen  = placeAxesOnGrid(fig,dim=(1,1),xspan=(0.78,1),yspan=(0.45,0.60))#plt.subplot2grid((gridsize_x,gridsize_y),(stasrowstart+1,10),colspan=2)
-        if 'sta_green_fit' not in data['all']['lgn'][unit].keys():
-            data['all']['lgn'][unit]['sta_green_fit'] = ephys.fitRF(data['all']['lgn'][unit]['sta_green']) 
-        #ax_fitGreen.imshow(data['all']['lgn'][unit]['sta_green_fit']['avg_space'],cmap=plt.cm.seismic,clim=(-0.3,0.3))
-        #ax_fitGreen.set_xlim(data['all']['lgn'][unit]['sta_green_fit']['center'][0]-9,data['all']['lgn'][unit]['sta_green_fit']['center'][0]+9)
-        #ax_fitGreen.set_ylim(data['all']['lgn'][unit]['sta_green_fit']['center'][1]-9,data['all']['lgn'][unit]['sta_green_fit']['center'][1]+9)
-        ax_impGreen.yaxis.tick_right();ax_impGreen.yaxis.set_label_position('right')
-        ax_impGreen.plot(data['all']['lgn'][unit]['sta_green_fit']['impulse'][0],data['all']['lgn'][unit]['sta_green_fit']['impulse'][1],color=Green)
-        ax_impGreen.plot(data['all']['lgn'][unit]['sta_uv_fit']['impulse'][0],data['all']['lgn'][unit]['sta_uv_fit']['impulse'][1],color=UV)
-        ax_impGreen.set_xlim(0,500);ax_impGreen.set_ylim(-0.3,0.3)
-        ax_impGreen.annotate(str(data['all']['lgn'][unit]['sta_green_fit']['center']),xy=(0,-0.25),color=Green)
-        ax_impGreen.annotate(str(data['all']['lgn'][unit]['sta_uv_fit']['center']),xy=(0,0.25),color=UV)
-        #cleanAxes(ax_fitGreen,total=True)
-        cleanAxes(ax_impGreen,bottomLabels=True)
-        for i,tau in enumerate(taus):
-            ax = ax_stas[1][i]#plt.subplot2grid((gridsize_x,gridsize_y),(stasrowstart+1,i))
-            ax.imshow(data['all']['lgn'][unit]['sta_green'][str(tau)],cmap=plt.cm.seismic,clim=(-0.3,0.3))
-            ax.set_xlim(data['all']['lgn'][unit]['sta_green_fit']['center'][0]-9,data['all']['lgn'][unit]['sta_green_fit']['center'][0]+9)
-            ax.set_ylim(data['all']['lgn'][unit]['sta_green_fit']['center'][1]-9,data['all']['lgn'][unit]['sta_green_fit']['center'][1]+9)
-            cleanAxes(ax,total=True)
-
-    #contrast
-    if 'contrast_green' in data['all']['lgn'][unit].keys() and 'contrast_uv' in data['all']['lgn'][unit].keys():
-        contrasts = [0,0.04,0.08,0.16,0.24,0.32,0.48,0.64,1.0]
-        ax_contrasts = placeAxesOnGrid(fig,dim=(2,len(contrasts)),xspan=(0,0.75),yspan=(0.65,0.81))
-        highest = 0
-        for i,contrast in enumerate(contrasts):
-            if np.max(data['all']['lgn'][unit]['contrast_uv'][contrast][0][:150]) > highest:
-                highest = np.max(data['all']['lgn'][unit]['contrast_uv'][contrast][0])
-            if np.max(data['all']['lgn'][unit]['contrast_green'][contrast][0][:150]) > highest:
-                highest = np.max(data['all']['lgn'][unit]['contrast_green'][contrast][0])
-        f1s_uv=[]
-        for i,contrast in enumerate(contrasts):
-            ax = ax_contrasts[0][i]#plt.subplot2grid((gridsize_x,gridsize_y),(startrowcontrasts,i),rowspan=2)
-            ax.plot(data['all']['lgn'][unit]['contrast_uv'][contrast][1][:150],data['all']['lgn'][unit]['contrast_uv'][contrast][0][:150],color=UV)
-            ax.set_title(str(contrast))
-            ax.set_ylim(0,highest)
-            cleanAxes(ax)
-            f1s_uv.append(ephys.f1(data['all']['lgn'][unit]['contrast_uv'][contrast][0][:150],4.5))
-
-        f1s_green=[];
-        for i,contrast in enumerate(contrasts):
-            ax = ax_contrasts[1][i]#plt.subplot2grid((gridsize_x,gridsize_y),(startrowcontrasts+3,i),rowspan=2)
-            ax.plot(data['all']['lgn'][unit]['contrast_green'][contrast][1][:150],data['all']['lgn'][unit]['contrast_green'][contrast][0][:150],color=Green)
-            ax.set_ylim(0,highest)
-            if i == 0:
-                ax.set_xticks([0,1]);ax.set_yticks([0,highest])
-                cleanAxes(ax,bottomLabels=True,leftLabels=True)
-            else:
-                cleanAxes(ax)
-            f1s_green.append(ephys.f1(data['all']['lgn'][unit]['contrast_green'][contrast][0][:150],4.5))    
-        ax_crf_green = placeAxesOnGrid(fig,dim=(1,1),xspan=(0.78,1),yspan=(0.65,0.78))#plt.subplot2grid((gridsize_x,gridsize_y),(startrowcontrasts+3,len(contrasts)),rowspan=2,colspan=3)
-        ax_crf_green.yaxis.tick_right();ax_crf_green.yaxis.set_label_position('right')
-        ax_crf_green.plot(contrasts,f1s_green,'-o',color=Green)
-        ax_crf_green.plot(contrasts,f1s_uv,'-o',color=UV)
-        ax_crf_green.set_xlabel(r'$contrast \/ $[%]',fontsize=10);
-        ax_crf_green.set_ylabel(r'$f1 \/ $[Hz]',fontsize=10);
-        ax_crf_green.set_ylim(0,np.max([f1s_uv,f1s_green])+5);cleanAxes(ax_crf_green,bottomLabels=True,rightLabels=True)
-        #ax_crf_uv.set_ylim(0,np.max([f1s_uv,f1s_green])+5);cleanAxes(ax_crf_uv,rightLabels=True)
-        #ax_crf_uv.set_xscale('log');ax_crf_uv.set_xlim(np.min(contrasts)-0.02,np.max(contrasts))
-        ax_crf_green.set_xscale('log');ax_crf_green.set_xlim(np.min(contrasts)-0.02,np.max(contrasts))
-
-    #gratings
-    if 'gratings_sf_isoluminant' in data['all']['lgn'][unit].keys() and 'gratings_sf_luminance' in data['all']['lgn'][unit].keys():
-        sfs = np.sort(data['all']['lgn'][unit]['gratings_sf_luminance'].keys()).tolist()
-        ax_sfs = placeAxesOnGrid(fig,dim=(2,len(sfs)),xspan=(0,0.75),yspan=(0.88,1.0))
-        highest = 0
-        for i,sf in enumerate(sfs):
-            if np.max(data['all']['lgn'][unit]['gratings_sf_luminance'][sf][0][:150]) > highest:
-                highest = np.max(data['all']['lgn'][unit]['gratings_sf_luminance'][sf][0])
-            if np.max(data['all']['lgn'][unit]['gratings_sf_isoluminant'][sf][0][:150]) > highest:
-                highest = np.max(data['all']['lgn'][unit]['gratings_sf_isoluminant'][sf][0])
-        f1s_uv=[]
-        for i,sf in enumerate(sfs):
-            ax = ax_sfs[0][i]#plt.subplot2grid((gridsize_x,gridsize_y),(startrowgratings,i),rowspan=2)
-            ax.plot(data['all']['lgn'][unit]['gratings_sf_isoluminant'][sf][1][:150],data['all']['lgn'][unit]['gratings_sf_isoluminant'][sf][0][:150],color='#3399ff')
-            ax.set_title(str(sf))
-            ax.set_ylim(0,highest)
-            cleanAxes(ax)
-            f1s_uv.append(ephys.f1(data['all']['lgn'][unit]['gratings_sf_isoluminant'][sf][0][:150],4.5))
-
-
-        f1s_green=[];
-        for i,sf in enumerate(sfs):
-            ax = ax_sfs[1][i]#plt.subplot2grid((gridsize_x,gridsize_y),(startrowgratings+3,i),rowspan=2)
-            ax.plot(data['all']['lgn'][unit]['gratings_sf_luminance'][sf][1][:150],data['all']['lgn'][unit]['gratings_sf_luminance'][sf][0][:150],color='k')
-            ax.set_ylim(0,highest)
-            if i == 0:
-                ax.set_xticks([0,1]);ax.set_yticks([0,highest])
-                cleanAxes(ax,bottomLabels=True,leftLabels=True)
-            else:
-                cleanAxes(ax)
-            f1s_green.append(ephys.f1(data['all']['lgn'][unit]['gratings_sf_luminance'][sf][0][:150],4.5))    
-        ax_sf_lum = placeAxesOnGrid(fig,dim=(1,1),xspan=(0.78,1),yspan=(0.87,1.0))#plt.subplot2grid((gridsize_x,gridsize_y),(startrowgratings+3,len(sfs)),rowspan=2,colspan=3)
-        ax_sf_lum.yaxis.tick_right();ax_sf_lum.yaxis.set_label_position('right')
-        ax_sf_lum.plot(sfs,f1s_green,'-o',color='k')
-        ax_sf_lum.plot(sfs,f1s_uv,'-o',color='#3399ff')
-        ax_sf_lum.set_xlabel(r'$spatial freq. \/ $[cyc/o]',fontsize=10);
-        ax_sf_lum.set_ylabel(r'$f1 \/ $[Hz]',fontsize=10);
-        ax_sf_lum.set_ylim(0,np.max([f1s_uv,f1s_green])+5);cleanAxes(ax_sf_lum,bottomLabels=True,rightLabels=True)
-        #ax_sf_iso.set_ylim(0,np.max([f1s_uv,f1s_green])+5);cleanAxes(ax_sf_iso,rightLabels=True)
-        ax_sf_lum.set_xscale('log');ax_sf_lum.set_xlim(np.min(sfs)-0.01,np.max(sfs))
-        #ax_sf_iso.set_xscale('log');ax_sf_iso.set_xlim(np.min(sfs)-0.01,np.max(sfs))
-
-    #plt.tight_layout()
-    fig.savefig(os.path.join(r'C:\Users\danield\OneDrive for Business\allenTransfer\notebooks\ephys\color_units_plots\eps',data['name']+'_'+unit+'.eps'),format='eps')
-    fig.savefig(os.path.join(r'C:\Users\danield\OneDrive for Business\allenTransfer\notebooks\ephys\color_units_plots\png',data['name']+'_'+unit+'.png'),format='png')
-
-def plotExchangeFromPSTH_2(data,unit,setcolor,UV='#4B0082',Green='#6B8E23',**kwargs):
-    if 'axis' in kwargs.keys():
-        axis = kwargs['axis']
+                print 'incorrect number of colors specified.';return None
     else:
-        plt.figure();axis=plt.gca()
+        c = [c for dump in range(len(s))]
     
-    if 'color_exchange_'+setcolor in data['all']['lgn'][unit].keys():
-        if data['all']['lgn'][unit]['color_exchange_'+setcolor][0][0] is not None:
-            test_contrasts_o=np.array([-1.0,-0.8,-0.6,-0.5,-0.4,-0.2,0.0])
-            #set_test_ratio_opp = np.array([((np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][13:63])-np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][63:83]))/(np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][:10])*3.0+0.1))-1 for test_contrast in test_contrasts_o])
-            set_test_ratio_opp = np.array([((np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][13:63]))/(np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][:10])*5.0+0.1))-1 for test_contrast in test_contrasts_o])
-            test_contrasts_s=np.array([1.0,0.8,0.6,0.5,0.4,0.2,0.0])
-            #set_test_ratio_same = np.array([((np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][13:63])-np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][63:83]))/(np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][:10])*3.0+0.1))-1 for test_contrast in test_contrasts_s])
-            set_test_ratio_same = np.array([((np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][13:63]))/(np.trapz(data['all']['lgn'][unit]['color_exchange_'+setcolor][test_contrast][0][:10])*5.0+0.1))-1 for test_contrast in test_contrasts_s])
+    points=[]    
+    for (x_i,y_i,r_i,c_i) in zip(x,y,s,c):
+        points.append(patches.Circle((x_i,y_i),radius=r_i))
+    if cmap is not None:
+        p = PatchCollection(points,cmap=cmap,alpha=alpha,clim=(-1,1))
+        p.set_array(np.array(c))
+        ax.add_collection(p)
+    else:
+        p = PatchCollection(points,color=c,alpha=alpha)
+        ax.add_collection(p)
+    if colorbar:
+        plt.colorbar(p)
+    
+def plotsta(sta,taus=(np.linspace(-10,280,30).astype(int)),colorrange=(-0.15,0.15),title='',taulabels=False,nrows=3,cmap=plt.cm.seismic,smooth=None,colorbar=False):
+#show the space-space plots of an already computed STRF for a range of taus.
+    ncols = np.ceil(len(taus) / nrows ).astype(int)#+1
+    fig,ax = plt.subplots(nrows,ncols,figsize=(10,6))
+    titleset=False
+    m=np.mean(sta[str(taus[3])])
+    for i,tau in enumerate(taus):
+        if nrows>1:
+            axis = ax[int(np.floor(i/ncols))][i%ncols]
+        else:
+            axis = ax[i]
+        if smooth is None:
+            img = sta[str(tau)].T 
+        else:
+            img = smoothRF(sta[str(tau)].T,smooth)
 
-            if setcolor == 'uv':
-                x=-0.4/(test_contrasts_o);x[-1]=test_contrasts_s[0]/0.4+0.2
-                axis.plot(x,set_test_ratio_opp/np.max(zip(set_test_ratio_opp,set_test_ratio_same)),'--o',color=Green)
-                #axis.plot(x,set_test_ratio_opp,'--o',color=Green)
-                x=0.4/(test_contrasts_s);x[-1]=test_contrasts_s[0]/0.4+0.2
-                axis.plot(x,set_test_ratio_same/np.max(zip(set_test_ratio_opp,set_test_ratio_same)),'-o',fillstyle='none',color=Green)
-                #axis.plot(x,set_test_ratio_same,'-o',fillstyle='none',color=Green)
-            else:
-                axis.plot(test_contrasts_o/-0.4,set_test_ratio_opp/np.max(zip(set_test_ratio_opp,set_test_ratio_same)),'--o',color=UV)
-                #axis.plot(test_contrasts_o/-0.4,set_test_ratio_opp,'--o',color=UV)
-                axis.plot(test_contrasts_s/0.4,set_test_ratio_same/np.max(zip(set_test_ratio_opp,set_test_ratio_same)),'-o',fillstyle='none',color=UV)
-                #axis.plot(test_contrasts_s/0.4,set_test_ratio_same,'-o',fillstyle='none',color=UV)
+        img = axis.imshow(img,cmap=cmap,vmin=colorrange[0],vmax=colorrange[1],interpolation='none')
+        axis.set_frame_on(False);
+        axis.set_xticklabels('',visible=False);
+        axis.set_xticks([]);
+        axis.set_yticklabels('',visible=False);
+        axis.set_yticks([])
+        axis.set_aspect(1.0)
+        if taulabels:
+            axis.set_title('tau = '+str(tau),fontsize=8)
+        if titleset is not True:
+            axis.set_title(title,fontsize=12)
+            titleset=True
+        else:
+			if tau == 0:
+				axis.set_title('tau = '+str(tau),fontsize=12)
+    plt.tight_layout()
+    if colorbar:
+        plt.colorbar(img)
 
-            axis.set_ylim(-1.1,1.1);axis.set_xlim(0,2.7)
-            axis.set_ylabel(r'$normalized response$',fontsize=12)
-            axis.tick_params(axis='both',labelsize=10)
-            axis.spines['top'].set_visible(False);axis.yaxis.set_ticks_position('left')
-            axis.spines['right'].set_visible(False);axis.xaxis.set_ticks_position('bottom')   
-            axis.set_xlabel(r'$UV:green \/ Ratio$',fontsize=12)
-            axis.axhline(y=0,color='k',linestyle='--')
-            #axis.set_title(expt_names[i]+' unit: '+unit)
+#=================================================================================================
 
+
+
+
+#=================================================================================================
+#---------custom-made analysis functions-------------------------------------------------
+#---------includes some plotting capabilities as well------------------------------------
+#=================================================================================================
 #returns the F1 frequency of a response. requires the frequency to specified.
 #computed in the Fourier domain.
 def f1(inp,freq):
@@ -465,53 +188,53 @@ def psth_line(times,triggers,pre=0.5,timeDomain=False,post=1,binsize=0.05,ymax=7
     edges = np.linspace(-pre,post,numbins)
 
     dump=plt.locator_params(axis='y',nbins=4)
-    if output == 'fig':
-        if error == 'shaded':
-            if 'shade_color' in kwargs.keys():
-                shade_color=kwargs['shade_color']
-            else:
-                shade_color=color    
-            if axes == None:
-                plt.figure()
-                axes=plt.gca()
-            upper = hist+variance
-            lower = hist-variance
-            axes.fill_between(edges[2:-1],upper[2:-1]+yoffset,hist[2:-1]+yoffset,alpha=alpha,color='white',facecolor=shade_color)
-            axes.fill_between(edges[2:-1],hist[2:-1]+yoffset,lower[2:-1]+yoffset,alpha=alpha,color='white',facecolor=shade_color)
-            axes.plot(edges[2:-1],hist[2:-1]+yoffset,color=color,linewidth=linewidth)
-            axes.set_xlim(-pre,post-1)
-            axes.set_ylim(0,ymax);
-            if sparse:
-                axes.set_xticklabels([])
-                axes.set_yticklabels([])
-            else:
-                if labels:
-                    axes.set_xlabel(r'$time \/ [s]$',fontsize=axis_labelsize)
-                    axes.set_ylabel(r'$firing \/ rate \/ [Hz]$',fontsize=axis_labelsize)
-                    axes.tick_params(axis='both',labelsize=labelsize)
-            axes.spines['top'].set_visible(False);axes.yaxis.set_ticks_position('left')
-            axes.spines['right'].set_visible(False);axes.xaxis.set_ticks_position('bottom')   
-            axes.set_title(name,y=0.5)
-            return axes 
-        else:
-            if axes == None:
-                plt.figure()
-                axes=plt.gca()
-            f=axes.errorbar(edges,hist,yerr=variance,color=color)
-            axes.set_xlim(-pre,post - 1)
-            axes.set_ylim(0,ymax)
-            if sparse:
-                axes.set_xticklabels([])
-                axes.set_yticklabels([])
-            else:
-                if labels:
-                    axes.set_xlabel(r'$time \/ [s]$',fontsize=axis_labelsize)
-                    axes.set_ylabel(r'$firing \/ rate \/ [Hz]$',fontsize=axis_labelsize)
-                    axes.tick_params(axis='both',labelsize=labelsize)
-            axes.spines['top'].set_visible(False);axes.yaxis.set_ticks_position('left')
-            axes.spines['right'].set_visible(False);axes.xaxis.set_ticks_position('bottom')   
-            axes.set_title(name)
-            return axes
+    # if output == 'fig':
+    #     if error == 'shaded':
+    #         if 'shade_color' in kwargs.keys():
+    #             shade_color=kwargs['shade_color']
+    #         else:
+    #             shade_color=color    
+    #         if axes == None:
+    #             plt.figure()
+    #             axes=plt.gca()
+    #         upper = hist+variance
+    #         lower = hist-variance
+    #         axes.fill_between(edges[2:-1],upper[2:-1]+yoffset,hist[2:-1]+yoffset,alpha=alpha,color='white',facecolor=shade_color)
+    #         axes.fill_between(edges[2:-1],hist[2:-1]+yoffset,lower[2:-1]+yoffset,alpha=alpha,color='white',facecolor=shade_color)
+    #         axes.plot(edges[2:-1],hist[2:-1]+yoffset,color=color,linewidth=linewidth)
+    #         axes.set_xlim(-pre,post-1)
+    #         axes.set_ylim(0,ymax);
+    #         if sparse:
+    #             axes.set_xticklabels([])
+    #             axes.set_yticklabels([])
+    #         else:
+    #             if labels:
+    #                 axes.set_xlabel(r'$time \/ [s]$',fontsize=axis_labelsize)
+    #                 axes.set_ylabel(r'$firing \/ rate \/ [Hz]$',fontsize=axis_labelsize)
+    #                 axes.tick_params(axis='both',labelsize=labelsize)
+    #         axes.spines['top'].set_visible(False);axes.yaxis.set_ticks_position('left')
+    #         axes.spines['right'].set_visible(False);axes.xaxis.set_ticks_position('bottom')   
+    #         axes.set_title(name,y=0.5)
+    #         return axes 
+    #     else:
+    #         if axes == None:
+    #             plt.figure()
+    #             axes=plt.gca()
+    #         f=axes.errorbar(edges,hist,yerr=variance,color=color)
+    #         axes.set_xlim(-pre,post - 1)
+    #         axes.set_ylim(0,ymax)
+    #         if sparse:
+    #             axes.set_xticklabels([])
+    #             axes.set_yticklabels([])
+    #         else:
+    #             if labels:
+    #                 axes.set_xlabel(r'$time \/ [s]$',fontsize=axis_labelsize)
+    #                 axes.set_ylabel(r'$firing \/ rate \/ [Hz]$',fontsize=axis_labelsize)
+    #                 axes.tick_params(axis='both',labelsize=labelsize)
+    #         axes.spines['top'].set_visible(False);axes.yaxis.set_ticks_position('left')
+    #         axes.spines['right'].set_visible(False);axes.xaxis.set_ticks_position('bottom')   
+    #         axes.set_title(name)
+    #         return axes
     if output == 'hist':
         return (hist,edges)    
     if output == 'p':
@@ -780,32 +503,42 @@ def fit_rf_2Dgauss_centerFixed(data,center_guess,width_guess=2,height_guess=2):
 def smoothRF(img,size=3):
     smooth = gaussian_filter(img,(size,size))
     return smooth
+#=================================================================================================
 
-def scatter_withcirclesize(ax,x,y,s,alpha=1.0,c='k',cmap=plt.cm.PRGn,**kwargs):
-    if c != 'k':
-        if type(c)==str:
-            c = [c for dump in range(len(s))]
-            cmap=None
-        if type(c)==list:
-            if len(c) == len(s):
-                c = c
-            else:
-                print 'incorrect number of colors specified.';return None
-    else:
-        c = ['k' for dump in range(len(s))]
-    
-    points=[]    
-    for (x_i,y_i,r_i,c_i) in zip(x,y,s,c):
-        points.append(patches.Circle((x_i,y_i),radius=r_i))
-    if cmap is not None:
-        p = PatchCollection(points,cmap=cmap,alpha=alpha,clim=(-1,1))
-        p.set_array(np.array(c))
-        ax.add_collection(p)
-    else:
-        p = PatchCollection(points,color=c,alpha=alpha)
-        ax.add_collection(p)
-    #plt.colorbar(p)
-    
+
+ 
+#propagate cell ID numbers from the sorting process
+cell_numbers={}
+for expt in ['M186118','M186100','M180417','M186098','M179401','M192079','M181423']:
+    cell_numbers[expt]={}
+cell_numbers['M186118']['lgn_list_ex']=[365,366,75,457,451,115,449,187,371,374,189,155,191,401,394,
+ 395,121,240,406,463,430,243,88,442,166,247,52]
+cell_numbers['M186100']['lgn_list_ex']=[503,505,
+ 519,549,547,559,557,567,138,715,709,811]
+cell_numbers['M180417']['lgn_list_ex']=[405,402,407,357,412,361,371,268,664,662,665,449,451,152,
+ 457,458,35,463,470,667,493,489,147,196,85,26,
+            546,540,550,81,83,298,189,567,581,580,
+            16,586,596,593,590,184,597,599,601,608,12,610,232,619,182,624,623,627,
+            68,631,630,229,286,636,642,647,659,648,6,649,657,658,654,284]
+cell_numbers['M186098']['lgn_list_ex']=[318,256,
+ 269,376,427,431,437,458,342,137,8,465,391,467,
+ 7,346,83,58]
+cell_numbers['M179401']['lgn_list_ex']=[129,177,176,222,262,127,175,84,46,261,220,174,82,125,472,272,271,172,121,37,80,287,293,294,475,311,295,478,316,320,321,
+ 33,323,347,325,310,167,327,28,331,209,251,252,480,479,22,351,353,70,357,363,110,361,356,338,339,154,155,473,474,202,65,66,492,482,
+ 366,484,343,414,426,428,461,9,444,453,192,193,451,382,392,437,55,397,233,236,470,463,454,490,185,440,471,94,229,231,181,91,467,
+             468][:44]
+cell_numbers['M192079']['lgn_list_ex']=[227,295,107,48,294,226,360,374,376,379,375,380,372,370,153,156,222,41,285,340,152,221,99,40,338,216,388,389,336,390,394,395,
+ 392,211,400,399,401,94,402,32,406,271,410,407,417,419,409,434,429,431,31,30,435,437,87,136,140,445,439,440,444,28,206,201,264,
+ 447,449,263,455,462,457,459,84,463,465,467,469,473,477,478,124,479,252,481,191,192,485,70,487,305,248,489,491,493,495,520,245,122,
+10,12,14,304,497,13,67,499,179,501,66,503,301,507,116,117,64,65,509,62,115,513,57,230,515,518,162,351,104,159,361][27:101]
+cell_numbers['M181423']['lgn_list_ex']=lgn_list = [290,467,471,186,324,44,304,328,325,469,470,134,184,329,318,40,
+ 77,394,384,263,267,393,117,171,28,73,401,428,425,429,415,438,419,432,436,437,439,440,24,441,206,207,163,
+ 108,162,252,254,448,22,447,158,202,450,250,16,17,452,201,104,454,453,61,249,456,153,101,102,458,8,195,460,
+ 462,464,194,3,241,143,1,188,472,431,321,323,281,293,295,289,299,303,45,307,236,88,82,342,368,233,177,176,32,
+ ][80:108]
+   
+#add in manual annotation of color exchange plots. these classification were done by djd based on visual inspection
+#of each cell. 
 exchange_annotation={'M186118':{},
                     'M186100':{},
                     'M186098':{},
@@ -835,4 +568,3 @@ exchange_annotation['M186100']['color_list']=[557]
 exchange_annotation['M186098']['color_list']=[256,376]
 exchange_annotation['M180417']['color_list']=[371,449,590,662,665]
 exchange_annotation['M181423_5']['color_list']=[241]
-}
