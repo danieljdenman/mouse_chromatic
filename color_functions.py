@@ -10,6 +10,7 @@ import pandas as pd
 from scipy.signal import savgol_filter
 from scipy.optimize import curve_fit
 from scipy.ndimage import zoom, gaussian_filter, imread
+from scipy.stats import ttest_ind
 from dip_test import dip
 
 #define some colors with HEX values, for use throughout in plotting functions
@@ -543,6 +544,16 @@ def fit_hyperbolicratio(xdata,ydata,r0_guess,rmax_guess,c50_guess,n_guess):
     popt,pcov = opt.curve_fit(hyperbolicratio,xdata,ydata,p0=(r0_guess,rmax_guess,c50_guess,n_guess))
     r0,rmax,c50,n = popt
     return  r0,rmax,c50,n,pcov
+
+def Welchs(a,b,equal_var=False,output=False):
+    print 'a: '+str(np.mean(a))+u' \u00B1 '+str(np.std(a))
+    print 'b: '+str(np.mean(b))+u' \u00B1 '+str(np.std(b))
+
+    t_stat, p_stat = ttest_ind(a,b,equal_var=False)
+    
+    print 't: '+str(t_stat)+'  p: '+str(p_stat)
+    if output:
+        return (t_stat, p_stat)
 #=================================================================================================
 
 
