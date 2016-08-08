@@ -8,7 +8,9 @@ import os, sys,glob, copy, h5py, csv
 import cPickle as pkl
 import pandas as pd
 from scipy.signal import savgol_filter
+from scipy.optimize import curve_fit
 from scipy.ndimage import zoom, gaussian_filter, imread
+from dip_test import dip
 
 #define some colors with HEX values, for use throughout in plotting functions
 UV='#4B0082'
@@ -105,7 +107,34 @@ def scatter_withcirclesize(ax,x,y,s,alpha=1.0,c='k',cmap=plt.cm.PRGn,colorbar=Fa
         ax.add_collection(p)
     if colorbar:
         plt.colorbar(p)
+
+def scatter_withellipsesize(ax,x,y,w,h,alpha=1.0,c='k',cmap=plt.cm.PRGn,colorbar=False,**kwargs):
+    if c != 'k':
+        if type(c)==str:
+            c = [c for dump in range(len(s))]
+            cmap=None
+        if type(c)==list:
+            if len(c) == len(w):
+                c = c
+            else:
+                print 'incorrect number of colors specified.';return None
+    else:
+        c = [c for dump in range(len(w))]
     
+    points=[]    
+    for (x_i,y_i,w_i,h_i,c_i) in zip(x,y,w,h,c):
+        #points.append(patches.Circle((x_i,y_i),radius=r_i))
+        points.append(patches.Ellipse((x_i,y_i),width=w_i,height=h_i))
+    if cmap is not None:
+        p = PatchCollection(points,cmap=cmap,alpha=alpha,clim=(-1,1))
+        p.set_array(np.array(c))
+        ax.add_collection(p)
+    else:
+        p = PatchCollection(points,color=c,alpha=alpha)
+        ax.add_collection(p)
+    if colorbar:
+        plt.colorbar(p)
+        
 def plotsta(sta,taus=(np.linspace(-10,280,30).astype(int)),colorrange=(-0.15,0.15),title='',taulabels=False,nrows=3,cmap=plt.cm.seismic,smooth=None,colorbar=False):
 #show the space-space plots of an already computed STRF for a range of taus.
     ncols = np.ceil(len(taus) / nrows ).astype(int)#+1
@@ -187,54 +216,54 @@ def psth_line(times,triggers,pre=0.5,timeDomain=False,post=1,binsize=0.05,ymax=7
     hist = np.mean(bytrial,axis=0)/binsize
     edges = np.linspace(-pre,post,numbins)
 
-    dump=plt.locator_params(axis='y',nbins=4)
-    # if output == 'fig':
-    #     if error == 'shaded':
-    #         if 'shade_color' in kwargs.keys():
-    #             shade_color=kwargs['shade_color']
-    #         else:
-    #             shade_color=color    
-    #         if axes == None:
-    #             plt.figure()
-    #             axes=plt.gca()
-    #         upper = hist+variance
-    #         lower = hist-variance
-    #         axes.fill_between(edges[2:-1],upper[2:-1]+yoffset,hist[2:-1]+yoffset,alpha=alpha,color='white',facecolor=shade_color)
-    #         axes.fill_between(edges[2:-1],hist[2:-1]+yoffset,lower[2:-1]+yoffset,alpha=alpha,color='white',facecolor=shade_color)
-    #         axes.plot(edges[2:-1],hist[2:-1]+yoffset,color=color,linewidth=linewidth)
-    #         axes.set_xlim(-pre,post-1)
-    #         axes.set_ylim(0,ymax);
-    #         if sparse:
-    #             axes.set_xticklabels([])
-    #             axes.set_yticklabels([])
-    #         else:
-    #             if labels:
-    #                 axes.set_xlabel(r'$time \/ [s]$',fontsize=axis_labelsize)
-    #                 axes.set_ylabel(r'$firing \/ rate \/ [Hz]$',fontsize=axis_labelsize)
-    #                 axes.tick_params(axis='both',labelsize=labelsize)
-    #         axes.spines['top'].set_visible(False);axes.yaxis.set_ticks_position('left')
-    #         axes.spines['right'].set_visible(False);axes.xaxis.set_ticks_position('bottom')   
-    #         axes.set_title(name,y=0.5)
-    #         return axes 
-    #     else:
-    #         if axes == None:
-    #             plt.figure()
-    #             axes=plt.gca()
-    #         f=axes.errorbar(edges,hist,yerr=variance,color=color)
-    #         axes.set_xlim(-pre,post - 1)
-    #         axes.set_ylim(0,ymax)
-    #         if sparse:
-    #             axes.set_xticklabels([])
-    #             axes.set_yticklabels([])
-    #         else:
-    #             if labels:
-    #                 axes.set_xlabel(r'$time \/ [s]$',fontsize=axis_labelsize)
-    #                 axes.set_ylabel(r'$firing \/ rate \/ [Hz]$',fontsize=axis_labelsize)
-    #                 axes.tick_params(axis='both',labelsize=labelsize)
-    #         axes.spines['top'].set_visible(False);axes.yaxis.set_ticks_position('left')
-    #         axes.spines['right'].set_visible(False);axes.xaxis.set_ticks_position('bottom')   
-    #         axes.set_title(name)
-    #         return axes
+    if output == 'fig':
+        dump=plt.locator_params(axis='y',nbins=4)
+        if error == 'shaded':
+            if 'shade_color' in kwargs.keys():
+                shade_color=kwargs['shade_color']
+            else:
+                shade_color=color    
+            if axes == None:
+                plt.figure()
+                axes=plt.gca()
+            upper = hist+variance
+            lower = hist-variance
+            axes.fill_between(edges[2:-1],upper[2:-1]+yoffset,hist[2:-1]+yoffset,alpha=alpha,color='white',facecolor=shade_color)
+            axes.fill_between(edges[2:-1],hist[2:-1]+yoffset,lower[2:-1]+yoffset,alpha=alpha,color='white',facecolor=shade_color)
+            axes.plot(edges[2:-1],hist[2:-1]+yoffset,color=color,linewidth=linewidth)
+            axes.set_xlim(-pre,post-1)
+            axes.set_ylim(0,ymax);
+            if sparse:
+                axes.set_xticklabels([])
+                axes.set_yticklabels([])
+            else:
+                if labels:
+                    axes.set_xlabel(r'$time \/ [s]$',fontsize=axis_labelsize)
+                    axes.set_ylabel(r'$firing \/ rate \/ [Hz]$',fontsize=axis_labelsize)
+                    axes.tick_params(axis='both',labelsize=labelsize)
+            axes.spines['top'].set_visible(False);axes.yaxis.set_ticks_position('left')
+            axes.spines['right'].set_visible(False);axes.xaxis.set_ticks_position('bottom')   
+            axes.set_title(name,y=0.5)
+            return axes 
+        else:
+            if axes == None:
+                plt.figure()
+                axes=plt.gca()
+            f=axes.errorbar(edges,hist,yerr=variance,color=color)
+            axes.set_xlim(-pre,post - 1)
+            axes.set_ylim(0,ymax)
+            if sparse:
+                axes.set_xticklabels([])
+                axes.set_yticklabels([])
+            else:
+                if labels:
+                    axes.set_xlabel(r'$time \/ [s]$',fontsize=axis_labelsize)
+                    axes.set_ylabel(r'$firing \/ rate \/ [Hz]$',fontsize=axis_labelsize)
+                    axes.tick_params(axis='both',labelsize=labelsize)
+            axes.spines['top'].set_visible(False);axes.yaxis.set_ticks_position('left')
+            axes.spines['right'].set_visible(False);axes.xaxis.set_ticks_position('bottom')   
+            axes.set_title(name)
+            return axes
     if output == 'hist':
         return (hist,edges)    
     if output == 'p':
@@ -503,6 +532,17 @@ def fit_rf_2Dgauss_centerFixed(data,center_guess,width_guess=2,height_guess=2):
 def smoothRF(img,size=3):
     smooth = gaussian_filter(img,(size,size))
     return smooth
+
+
+def hyperbolicratio(C,r0,rmax,c50,n):
+#hyperbolic ratio fit function
+    return r0 + rmax * ( C**n / (c50**n+C**n))
+
+def fit_hyperbolicratio(xdata,ydata,r0_guess,rmax_guess,c50_guess,n_guess):
+#fit contrast response with the hyperbolic ratio function 
+    popt,pcov = opt.curve_fit(hyperbolicratio,xdata,ydata,p0=(r0_guess,rmax_guess,c50_guess,n_guess))
+    r0,rmax,c50,n = popt
+    return  r0,rmax,c50,n,pcov
 #=================================================================================================
 
 
