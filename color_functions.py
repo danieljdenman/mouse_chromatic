@@ -12,6 +12,7 @@ from scipy.optimize import curve_fit
 from scipy.ndimage import zoom, gaussian_filter, imread
 from scipy.stats import ttest_ind
 from dip_test import dip
+from decimal import Decimal
 
 #define some colors with HEX values, for use throughout in plotting functions
 UV='#4B0082'
