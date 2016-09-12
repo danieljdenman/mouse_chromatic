@@ -11,7 +11,12 @@ from scipy.signal import savgol_filter
 from scipy.optimize import curve_fit
 from scipy.ndimage import zoom, gaussian_filter, imread
 from scipy.stats import ttest_ind
-from dip_test import dip
+try:
+    from dip_test import dip
+    has_dip = True
+except:
+    print 'dip_test package not installed. will not be able to perform Hartigan dip test. get it from: https://github.com/tatome/dip_test'
+    has_dip=False
 from decimal import Decimal
 
 #define some colors with HEX values, for use throughout in plotting functions
