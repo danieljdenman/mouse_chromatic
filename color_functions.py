@@ -10,7 +10,7 @@ import pandas as pd
 from scipy.signal import savgol_filter
 from scipy.optimize import curve_fit
 from scipy.ndimage import zoom, gaussian_filter, imread
-from scipy.stats import ttest_ind
+from scipy.stats import ttest_ind, ttest_1samp; from scipy.stats import f as f_test
 try:
     from dip_test import dip
     has_dip = True
